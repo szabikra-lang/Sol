@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SOL</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --wood-head: #E8D5B0;
+    --wood-body: #8B6340;
+    --wood-arm: #A0522D;
+    --metal: #888;
+    --orange: #FF6B35;
+    --yellow: #FFD93D;
+    --cream: #FFF8EE;
+    --dark: #1a0f00;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    background: #1a0f00;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  .bg {
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, #3d2200 0%, #1a0f00 70%);
+  }
+
+  .stars { position: fixed; inset: 0; pointer-events: none; }
+  .star {
+    position: absolute; background: white; border-radius: 50%;
+    animation: twinkle var(--d,3s) ease-in-out infinite alternate;
+    animation-delay: var(--dl, 0s);
+  }
+  @keyframes twinkle { from{opacity:0.1;} to{opacity:0.7;} }
+
+  /* LOCK */
+  #lockScreen {
+    position: fixed; inset: 0; z-index: 100;
+    background: radial-gradient(ellipse at 50% 40%, #3d2200, #0a0500);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 24px;
+  }
+  .lock-icon { font-size: 4rem; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.1);} }
+  .lock-title { font-family:'Fredoka One',cursive; font-size:2.2rem; color:var(--yellow); text-shadow:0 0 20px rgba(255,217,61,0.5); }
+  .lock-msg { color:rgba(255,217,61,0.6); font-size:0.9rem; font-weight:700; text-align:center; max-width:260px; line-height:1.6; }
+
+  /* MAIN */
+  #mainUI {
+    position: fixed; inset: 0; z-index: 10;
+    display: none; flex-direction: column;
+    align-items: center; justify-content: space-between;
+    padding: 24px 20px 36px;
+  }
+
+  .topbar {
+    width: 100%; display: flex;
+    justify-content: space-between; align-items: center;
+  }
+  .sol-title {
+    font-family:'Fredoka One',cursive; font-size:2rem;
+    color:var(--yellow); text-shadow:0 0 20px rgba(255,217,61,0.6); letter-spacing:3px;
+  }
+  .menu-btn {
+    width:44px; height:44px;
+    background:rgba(255,217,61,0.12); border:2px solid rgba(255,217,61,0.3);
+    border-radius:12px; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:5px; cursor:pointer;
+  }
+  .menu-btn:active { background:rgba(255,217,61,0.28); }
+  .menu-line { width:20px; height:2px; background:var(--yellow); border-radius:2px; }
+
+  /* SOL FACE AREA */
+  .sol-wrap {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+  }
+
+  .glow-ring {
+    position: absolute;
+    width: 240px; height: 240px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,217,61,0.12) 0%, transparent 70%);
+    top: 50%; left: 50%; transform: translate(-50%,-50%);
+    animation: glowIdle 3s ease-in-out infinite;
+    pointer-events: none; z-index: 0;
+  }
+  @keyframes glowIdle { 0%,100%{opacity:0.5;transform:translate(-50%,-50%) scale(1);} 50%{opacity:1;transform:translate(-50%,-50%) scale(1.12);} }
+
+  .speaking .glow-ring {
+    background: radial-gradient(circle, rgba(255,150,50,0.25) 0%, transparent 70%);
+    animation: glowSpeak 0.35s ease-in-out infinite alternate;
+  }
+  @keyframes glowSpeak { from{opacity:0.4;transform:translate(-50%,-50%) scale(1);} to{opacity:1;transform:translate(-50%,-50%) scale(1.22);} }
+
+  .listening .glow-ring {
+    background: radial-gradient(circle, rgba(77,150,255,0.2) 0%, transparent 70%);
+    animation: glowListen 0.7s ease-in-out infinite alternate;
+  }
+  @keyframes glowListen { from{transform:translate(-50%,-50%) scale(1);} to{transform:translate(-50%,-50%) scale(1.28);} }
+
+  #solSVG {
+    position: relative; z-index: 2;
+    filter: drop-shadow(0 10px 30px rgba(180,100,30,0.45));
+    width: 185px; height: auto;
+  }
+
+  /* Eye blink */
+  .lid-left, .lid-right {
+    transform-origin: center top;
+    animation: blink 5s ease-in-out infinite;
+  }
+  .lid-right { animation-delay: 0.06s; }
+  @keyframes blink {
+    0%,85%,100% { transform: scaleY(0); }
+    90%,97% { transform: scaleY(1); }
+  }
+
+  /* Sound waves */
+  #soundWaves { transition: opacity 0.2s; }
+
+  /* STATUS */
+  .status-text {
+    font-family:'Fredoka One',cursive; font-size:1.05rem;
+    color:rgba(255,217,61,0.75); text-align:center;
+    min-height:28px; letter-spacing:1px;
+  }
+
+  /* TRANSCRIPT */
+  .transcript-box {
+    width:100%; min-height:56px; max-height:90px;
+    background:rgba(255,255,255,0.05);
+    border:1px solid rgba(255,217,61,0.2); border-radius:16px;
+    padding:11px 16px; color:rgba(255,240,200,0.85);
+    font-size:0.88rem; font-weight:700; line-height:1.45;
+    overflow-y:auto; text-align:center;
+  }
+
+  /* MIC */
+  .mic-area { display:flex; flex-direction:column; align-items:center; gap:10px; }
+
+  .mic-btn {
+    width:86px; height:86px; border-radius:50%; border:none; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:2.3rem;
+    background:linear-gradient(145deg,#FF6B35,#FFD93D);
+    box-shadow:0 6px 28px rgba(255,107,53,0.5);
+    transition:transform 0.12s;
+  }
+  .mic-btn:active { transform:scale(0.91); }
+  .mic-btn.listening {
+    background:linear-gradient(145deg,#4D96FF,#00d4ff);
+    box-shadow:0 6px 28px rgba(77,150,255,0.6);
+    animation:micPulse 0.8s ease-out infinite;
+  }
+  @keyframes micPulse {
+    0%{box-shadow:0 6px 28px rgba(77,150,255,0.6),0 0 0 0 rgba(77,150,255,0.5);}
+    100%{box-shadow:0 6px 28px rgba(77,150,255,0.3),0 0 0 26px rgba(77,150,255,0);}
+  }
+  .mic-btn.disabled { background:rgba(255,255,255,0.1); box-shadow:none; cursor:not-allowed; opacity:0.4; }
+  .mic-label { color:rgba(255,217,61,0.55); font-size:0.78rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; }
+
+  /* MENU */
+  #menuOverlay {
+    position:fixed; inset:0; z-index:50;
+    background:rgba(0,0,0,0.88);
+    display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px;
+  }
+  .menu-title { font-family:'Fredoka One',cursive; font-size:1.8rem; color:var(--yellow); margin-bottom:6px; }
+  .menu-item {
+    width:240px; padding:13px 24px;
+    background:rgba(255,217,61,0.08); border:2px solid rgba(255,217,61,0.25);
+    border-radius:16px; color:var(--cream); font-family:'Nunito',sans-serif;
+    font-size:0.98rem; font-weight:800; cursor:pointer; text-align:center; transition:all 0.15s;
+  }
+  .menu-item:active { background:rgba(255,217,61,0.22); }
+  .menu-close { color:rgba(255,100,50,0.85); border-color:rgba(255,100,50,0.3); background:rgba(255,100,50,0.08); }
+
+  ::-webkit-scrollbar{width:3px;}
+  ::-webkit-scrollbar-thumb{background:rgba(255,217,61,0.3);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="stars" id="stars"></div>
+
+<!-- LOCK -->
+<div id="lockScreen">
+  <div class="lock-icon">🔒</div>
+  <div class="lock-title">☀️ SOL</div>
+  <div class="lock-msg">Ez egy különleges robot.<br>Érintsd hozzá a telefonodat<br>SOL fejéhez! 🤖✨</div>
+</div>
+
+<!-- MAIN -->
+<div id="mainUI">
+  <div class="topbar">
+    <div class="sol-title">☀️ SOL</div>
+    <div class="menu-btn" onclick="openMenu()">
+      <div class="menu-line"></div><div class="menu-line"></div><div class="menu-line"></div>
+    </div>
+  </div>
+
+  <!-- SOL SVG -->
+  <div class="sol-wrap" id="solFace">
+    <div class="glow-ring"></div>
+
+    <svg id="solSVG" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+
+      <!-- ===== SOUND WAVES ===== -->
+      <g id="soundWaves" opacity="0">
+        <path d="M12 105 Q2 92 12 79" stroke="#FFD93D" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M5 112 Q-9 92 5 72" stroke="#FFD93D" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.55"/>
+        <path d="M188 105 Q198 92 188 79" stroke="#FFD93D" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <path d="M195 112 Q209 92 195 72" stroke="#FFD93D" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.55"/>
+      </g>
+
+      <!-- ===== LEGS – rugós drót ===== -->
+      <!-- Bal láb drót rugó -->
+      <path d="M72 195 Q65 200 70 205 Q75 210 68 215 Q63 220 68 225 Q73 230 67 235" stroke="#999" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+      <!-- Jobb láb drót rugó -->
+      <path d="M128 195 Q135 200 130 205 Q125 210 132 215 Q137 220 132 225 Q127 230 133 235" stroke="#999" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+
+      <!-- Bal talp (fa, sárga-narancsos) -->
+      <rect x="54" y="234" width="24" height="10" rx="4" fill="#C8820A"/>
+      <rect x="55" y="235" width="22" height="8" rx="3" fill="#E8A020"/>
+      <circle cx="60" cy="239" r="2" fill="#FFD93D" opacity="0.7"/>
+
+      <!-- Jobb talp (fa) -->
+      <rect x="120" y="234" width="24" height="10" rx="4" fill="#C8820A"/>
+      <rect x="121" y="235" width="22" height="8" rx="3" fill="#E8A020"/>
+
+      <!-- ===== TEST (sötétebb fa) ===== -->
+      <rect x="58" y="148" width="84" height="50" rx="5" fill="#7B5230"/>
+      <rect x="60" y="150" width="80" height="46" rx="4" fill="#8B6340"/>
+
+      <!-- Fa erezetvonalak a testen -->
+      <path d="M62 160 Q85 158 138 161" stroke="#6B4820" stroke-width="0.8" fill="none" opacity="0.5"/>
+      <path d="M62 172 Q90 175 138 170" stroke="#6B4820" stroke-width="0.8" fill="none" opacity="0.4"/>
+      <path d="M62 184 Q80 181 138 185" stroke="#6B4820" stroke-width="0.8" fill="none" opacity="0.4"/>
+
+      <!-- Áramköri lap (bal felső) -->
+      <rect x="65" y="154" width="32" height="18" rx="2" fill="#1a3a1a"/>
+      <rect x="67" y="156" width="28" height="14" rx="1" fill="#0d2a0d"/>
+      <!-- chip sorok -->
+      <rect x="69" y="159" width="10" height="5" rx="1" fill="#2a6a2a"/>
+      <rect x="81" y="159" width="4" height="5" rx="1" fill="#4a4a1a"/>
+      <line x1="70" y1="164" x2="70" y2="168" stroke="#4a9a4a" stroke-width="1"/>
+      <line x1="73" y1="164" x2="73" y2="168" stroke="#4a9a4a" stroke-width="1"/>
+      <line x1="76" y1="164" x2="76" y2="168" stroke="#4a9a4a" stroke-width="1"/>
+
+      <!-- Pillangó csavar (jobb felső) -->
+      <ellipse cx="115" cy="160" rx="7" ry="4" fill="#B8860B" transform="rotate(-20,115,160)"/>
+      <ellipse cx="115" cy="160" rx="7" ry="4" fill="#B8860B" transform="rotate(20,115,160)"/>
+      <circle cx="115" cy="160" r="3" fill="#8B6914"/>
+
+      <!-- Virágos csavar (bal közép) -->
+      <circle cx="74" cy="178" r="7" fill="#2a2a2a"/>
+      <circle cx="74" cy="178" r="4" fill="#1a1a1a"/>
+      <circle cx="74" cy="175" r="2" fill="#444" opacity="0.7"/>
+      <circle cx="74" cy="181" r="2" fill="#444" opacity="0.7"/>
+      <circle cx="71" cy="178" r="2" fill="#444" opacity="0.7"/>
+      <circle cx="77" cy="178" r="2" fill="#444" opacity="0.7"/>
+
+      <!-- Rezisztor csoport (bőrszíjas) -->
+      <rect x="82" y="176" width="44" height="10" rx="4" fill="#8B4513" opacity="0.7"/>
+      <rect x="84" y="177" width="40" height="8" rx="3" fill="#A05020" opacity="0.5"/>
+      <!-- rezisztorok -->
+      <rect x="86" y="179" width="8" height="4" rx="2" fill="#c8a060"/>
+      <line x1="86" y1="181" x2="83" y2="181" stroke="#888" stroke-width="1"/>
+      <line x1="94" y1="181" x2="97" y2="181" stroke="#888" stroke-width="1"/>
+      <rect x="99" y="179" width="8" height="4" rx="2" fill="#d4a468"/>
+      <line x1="99" y1="181" x2="96" y2="181" stroke="#888" stroke-width="1"/>
+      <line x1="107" y1="181" x2="110" y2="181" stroke="#888" stroke-width="1"/>
+      <rect x="112" y="179" width="8" height="4" rx="2" fill="#b89050"/>
+      <line x1="112" y1="181" x2="109" y2="181" stroke="#888" stroke-width="1"/>
+      <line x1="120" y1="181" x2="123" y2="181" stroke="#888" stroke-width="1"/>
+
+      <!-- Kis csavar jobb alsó -->
+      <circle cx="126" cy="178" r="4" fill="#555"/>
+      <circle cx="126" cy="178" r="2" fill="#333"/>
+      <line x1="124" y1="178" x2="128" y2="178" stroke="#777" stroke-width="0.8"/>
+      <line x1="126" y1="176" x2="126" y2="180" stroke="#777" stroke-width="0.8"/>
+
+      <!-- ===== KAROK ===== -->
+      <!-- Bal váll összekötő -->
+      <rect x="44" y="150" width="16" height="8" rx="4" fill="#8B6340"/>
+
+      <!-- Bal felkar (bőr) -->
+      <rect x="26" y="148" width="20" height="30" rx="4" fill="#8B4513"/>
+      <rect x="28" y="150" width="16" height="26" rx="3" fill="#A0522D"/>
+      <!-- lyukak a karon -->
+      <circle cx="36" cy="156" r="3.5" fill="#6B3010"/>
+      <circle cx="36" cy="166" r="3.5" fill="#6B3010"/>
+      <circle cx="36" cy="176" r="3.5" fill="#6B3010"/>
+
+      <!-- Bal alkár rugó/csavar -->
+      <path d="M36 178 Q30 182 34 186 Q38 190 32 194" stroke="#888" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+      <!-- Bal fogó/kéz -->
+      <rect x="24" y="192" width="14" height="18" rx="3" fill="#8B4513"/>
+      <!-- fogó ujjak -->
+      <rect x="22" y="196" width="6" height="3" rx="1.5" fill="#7B3a0a"/>
+      <rect x="22" y="201" width="6" height="3" rx="1.5" fill="#7B3a0a"/>
+      <rect x="22" y="206" width="6" height="3" rx="1.5" fill="#7B3a0a"/>
+
+      <!-- Jobb váll összekötő -->
+      <rect x="140" y="150" width="16" height="8" rx="4" fill="#8B6340"/>
+
+      <!-- Jobb felkar -->
+      <rect x="154" y="148" width="20" height="30" rx="4" fill="#8B4513"/>
+      <rect x="156" y="150" width="16" height="26" rx="3" fill="#A0522D"/>
+      <circle cx="164" cy="156" r="3.5" fill="#6B3010"/>
+      <circle cx="164" cy="166" r="3.5" fill="#6B3010"/>
+      <circle cx="164" cy="176" r="3.5" fill="#6B3010"/>
+
+      <!-- Jobb alkár -->
+      <path d="M164 178 Q170 182 166 186 Q162 190 168 194" stroke="#888" stroke-width="2" fill="none" stroke-linecap="round"/>
+
+      <!-- Jobb kéz/fogó -->
+      <rect x="162" y="192" width="14" height="18" rx="3" fill="#8B4513"/>
+      <!-- piros sapkás alkatrész -->
+      <rect x="170" y="188" width="6" height="10" rx="3" fill="#CC2200"/>
+      <rect x="171" y="186" width="4" height="4" rx="2" fill="#FF3300"/>
+      <!-- kis fogó ujjak -->
+      <rect x="172" y="202" width="6" height="3" rx="1.5" fill="#7B3a0a"/>
+      <rect x="172" y="207" width="6" height="3" rx="1.5" fill="#7B3a0a"/>
+
+      <!-- ===== FEJ ===== -->
+      <!-- Nyak -->
+      <rect x="84" y="138" width="32" height="14" rx="3" fill="#A07850"/>
+      <rect x="86" y="140" width="28" height="10" rx="2" fill="#B08860"/>
+
+      <!-- Fej alap (világos fa) -->
+      <rect x="38" y="38" width="124" height="104" rx="10" fill="#D4B88A"/>
+      <rect x="42" y="42" width="116" height="96" rx="8" fill="#EDD5A8"/>
+
+      <!-- Fa erezet a fejen -->
+      <path d="M44 60 Q80 57 158 61" stroke="#C4A870" stroke-width="0.9" fill="none" opacity="0.4"/>
+      <path d="M44 75 Q90 78 158 74" stroke="#C4A870" stroke-width="0.9" fill="none" opacity="0.35"/>
+      <path d="M44 100 Q75 97 158 101" stroke="#C4A870" stroke-width="0.9" fill="none" opacity="0.3"/>
+      <path d="M44 120 Q85 123 158 118" stroke="#C4A870" stroke-width="0.9" fill="none" opacity="0.35"/>
+
+      <!-- Fej oldalsó csavarok -->
+      <!-- Bal oldal fehér csavar -->
+      <circle cx="38" cy="88" r="6" fill="#D8D8D8"/>
+      <circle cx="38" cy="88" r="3.5" fill="#C0C0C0"/>
+      <line x1="36" y1="88" x2="40" y2="88" stroke="#999" stroke-width="1.2"/>
+      <line x1="38" y1="86" x2="38" y2="90" stroke="#999" stroke-width="1.2"/>
+
+      <!-- Jobb oldal kis fehér csavar -->
+      <circle cx="162" cy="72" r="5" fill="#E8E8E8"/>
+      <circle cx="162" cy="72" r="3" fill="#D0D0D0"/>
+
+      <!-- ===== SZEMEK ===== -->
+      <!-- Bal szem mélyedés -->
+      <ellipse cx="78" cy="82" rx="22" ry="22" fill="#2a1a0a" opacity="0.2"/>
+      <!-- Bal szem gomb -->
+      <ellipse cx="78" cy="82" rx="18" ry="18" fill="#151515"/>
+      <ellipse cx="78" cy="82" rx="15" ry="15" fill="#0d0d0d"/>
+      <!-- lila visszfény -->
+      <ellipse cx="78" cy="82" rx="10" ry="10" fill="#1a0020" opacity="0.6"/>
+      <!-- fénypont -->
+      <ellipse cx="72" cy="76" rx="4" ry="3" fill="white" opacity="0.25"/>
+      <circle cx="71" cy="75" r="2" fill="white" opacity="0.5"/>
+
+      <!-- Jobb szem gomb -->
+      <ellipse cx="122" cy="82" rx="22" ry="22" fill="#2a1a0a" opacity="0.2"/>
+      <ellipse cx="122" cy="82" rx="18" ry="18" fill="#151515"/>
+      <ellipse cx="122" cy="82" rx="15" ry="15" fill="#0d0d0d"/>
+      <ellipse cx="122" cy="82" rx="10" ry="10" fill="#1a0020" opacity="0.6"/>
+      <ellipse cx="116" cy="76" rx="4" ry="3" fill="white" opacity="0.25"/>
+      <circle cx="115" cy="75" r="2" fill="white" opacity="0.5"/>
+
+      <!-- Szem pupilák (mozgatható csoportok) -->
+      <g id="leftPupilG">
+        <circle cx="78" cy="82" r="5" fill="#FF5500" opacity="0.4"/>
+      </g>
+      <g id="rightPupilG">
+        <circle cx="122" cy="82" r="5" fill="#FF5500" opacity="0.4"/>
+      </g>
+
+      <!-- Szemhéjak (pislogáshoz) -->
+      <rect class="lid-left" x="60" y="64" width="36" height="18" rx="4" fill="#EDD5A8"/>
+      <rect class="lid-right" x="104" y="64" width="36" height="18" rx="4" fill="#EDD5A8"/>
+
+      <!-- ===== SZÁJ (piros rezisztor alkatrész) ===== -->
+      <g id="mouthGroup">
+        <!-- rezisztor test -->
+        <rect id="mouthRect" x="84" y="112" width="32" height="10" rx="5" fill="#CC1100"/>
+        <rect x="86" y="113" width="28" height="8" rx="4" fill="#DD2200"/>
+        <!-- rezisztor lábak -->
+        <line x1="84" y1="117" x2="76" y2="117" stroke="#999" stroke-width="2" stroke-linecap="round"/>
+        <line x1="116" y1="117" x2="124" y2="117" stroke="#999" stroke-width="2" stroke-linecap="round"/>
+        <!-- sáv díszítés -->
+        <line x1="92" y1="113" x2="92" y2="122" stroke="#FF6644" stroke-width="1.5" opacity="0.6"/>
+        <line x1="100" y1="113" x2="100" y2="122" stroke="#882200" stroke-width="2" opacity="0.5"/>
+        <line x1="108" y1="113" x2="108" y2="122" stroke="#FF6644" stroke-width="1.5" opacity="0.6"/>
+      </g>
+
+      <!-- ===== FEJ TETEJE ===== -->
+      <!-- Zsanér -->
+      <rect x="60" y="35" width="80" height="8" rx="3" fill="#8B7355"/>
+      <rect x="62" y="36" width="76" height="6" rx="2" fill="#A08060"/>
+      <!-- zsanér közép rész (fém) -->
+      <rect x="88" y="33" width="24" height="10" rx="2" fill="#888"/>
+      <rect x="90" y="34" width="20" height="8" rx="1" fill="#999"/>
+      <circle cx="94" cy="38" r="2" fill="#777"/>
+      <circle cx="100" cy="38" r="2" fill="#777"/>
+      <circle cx="106" cy="38" r="2" fill="#777"/>
+
+      <!-- Barna bőr lap a zsanér felett -->
+      <ellipse cx="100" cy="28" rx="30" ry="8" fill="#7B4010" opacity="0.8"/>
+      <ellipse cx="100" cy="27" rx="26" ry="6" fill="#8B5020"/>
+
+      <!-- Lámpa (hátul, de jelezve a tetőn) -->
+      <rect x="74" y="30" width="52" height="6" rx="3" fill="#FFD93D" opacity="0.3" id="lampIndicator"/>
+
+    </svg>
+  </div>
+
+  <div class="status-text" id="statusText">Nyomd meg a gombot és beszélj! 🎙️</div>
+
+  <div class="transcript-box" id="transcriptBox">
+    Helló! Én vagyok SOL ☀️ Nyomd meg a gombot és mesélj nekem!
+  </div>
+
+  <div class="mic-area">
+    <button class="mic-btn" id="micBtn" onclick="toggleListen()">🎙️</button>
+    <div class="mic-label" id="micLabel">Nyomd meg</div>
+  </div>
+</div>
+
+<!-- MENU -->
+<div id="menuOverlay">
+  <div class="menu-title">☀️ SOL menü</div>
+  <div class="menu-item" onclick="solSay('Helló! Én vagyok SOL, a te varázsrobotod! Fa vagyok kívül, de belül tele vagyok varázslattal és szeretettel! Mit csináljunk ma?')">🤖 Ki vagyok én?</div>
+  <div class="menu-item" onclick="solSay('A hasamba van egy ceruzahegyező beépítve! Ha tompa a ceruzád, én megmentem a helyzetet! Hozd csak ide!')">✏️ Ceruzahegyező</div>
+  <div class="menu-item" onclick="solSay('A fejem hátulján van egy kis tölthető lámpa! Ha sötét van és félsz, én megvilágítom az utat! Nem kell félni, amíg én vagyok itt!')">💡 A lámpám</div>
+  <div class="menu-item" onclick="solSay('Mindig vigyázok rád! Én vagyok a te védelmeződ! Semmi rossz nem érhet, amíg SOL itt van!')">🛡️ Védelmező mód</div>
+  <div class="menu-item menu-close" onclick="closeMenu()">✕ Bezárás</div>
+</div>
+
+<script>
+// TOKEN VÉDELEM
+const VALID_TOKEN = 'SOL-x7k9mQpR2vZ';
+const TOKEN_WINDOW_MS = 30000;
+
+function checkAccess() {
+  if (sessionStorage.getItem('sol_access') === '1') return true;
+  const p = new URLSearchParams(window.location.search);
+  const token = p.get('key');
+  const ts = parseInt(p.get('ts') || '0');
+  return token === VALID_TOKEN && (Date.now() - ts) < TOKEN_WINDOW_MS;
+}
+
+function initAccess() {
+  if (checkAccess()) {
+    sessionStorage.setItem('sol_access', '1');
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('mainUI').style.display = 'flex';
+    initStars();
+    setTimeout(() => solSay('Heeellóóó! Én vagyok SOL, a te varázsrobotod! Fa vagyok kívül, de belül csupa mosoly! Nyomd meg a gombot és mesélj nekem valamit, csillagom!'), 900);
+  }
+}
+
+// CSILLAGOK
+function initStars() {
+  const c = document.getElementById('stars');
+  for (let i = 0; i < 55; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const sz = Math.random()*2.5+0.8;
+    s.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2+Math.random()*4}s;--dl:${Math.random()*4}s;`;
+    c.appendChild(s);
+  }
+}
+
+// HANG
+let isSpeaking = false;
+let talkInterval = null;
+
+function solSay(text) {
+  if (isSpeaking) window.speechSynthesis.cancel();
+  closeMenu();
+  setStatus('SOL beszél... 💬');
+  setTranscript('SOL: ' + text);
+  startTalking();
+
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'hu-HU';
+  u.pitch = 1.45;
+  u.rate = 0.90;
+  u.volume = 1.0;
+
+  const voices = window.speechSynthesis.getVoices();
+  const huV = voices.find(v => v.lang.startsWith('hu'));
+  if (huV) u.voice = huV;
+
+  u.onstart = () => {
+    isSpeaking = true;
+    document.getElementById('solFace').classList.add('speaking');
+    document.getElementById('soundWaves').style.opacity = '1';
+    document.getElementById('lampIndicator').style.opacity = '0.9';
+  };
+  u.onend = u.onerror = () => {
+    isSpeaking = false;
+    stopTalking();
+    document.getElementById('solFace').classList.remove('speaking');
+    document.getElementById('soundWaves').style.opacity = '0';
+    document.getElementById('lampIndicator').style.opacity = '0.3';
+    setStatus('Nyomd meg a gombot és beszélj! 🎙️');
+  };
+
+  window.speechSynthesis.speak(u);
+}
+
+// SZÁJ + SZEM ANIMÁCIÓ
+function startTalking() {
+  let ph = 0;
+  talkInterval = setInterval(() => {
+    ph += 0.45;
+    const dy = 6 + Math.sin(ph) * 5 + Math.random() * 4;
+    const r = document.getElementById('mouthRect');
+    if (r) {
+      r.setAttribute('y', String(112 - dy * 0.5));
+      r.setAttribute('height', String(10 + dy * 0.4));
+    }
+    // szemek mozgása
+    const ex = Math.sin(ph * 0.4) * 3.5;
+    const ey = Math.cos(ph * 0.3) * 2;
+    const lg = document.getElementById('leftPupilG');
+    const rg = document.getElementById('rightPupilG');
+    if (lg) lg.style.transform = `translate(${ex}px,${ey}px)`;
+    if (rg) rg.style.transform = `translate(${-ex*0.8}px,${ey}px)`;
+  }, 75);
+}
+
+function stopTalking() {
+  if (talkInterval) { clearInterval(talkInterval); talkInterval = null; }
+  const r = document.getElementById('mouthRect');
+  if (r) { r.setAttribute('y','112'); r.setAttribute('height','10'); }
+  const lg = document.getElementById('leftPupilG');
+  const rg = document.getElementById('rightPupilG');
+  if (lg) lg.style.transform = '';
+  if (rg) rg.style.transform = '';
+}
+
+// SPEECH RECOGNITION
+let recognition = null;
+let isListening = false;
+
+function initRecognition() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    setStatus('Ez a böngésző nem támogatja a hangfelismerést 😔');
+    document.getElementById('micBtn').classList.add('disabled');
+    return false;
+  }
+  recognition = new SR();
+  recognition.lang = 'hu-HU';
+  recognition.continuous = false;
+  recognition.interimResults = true;
+
+  recognition.onstart = () => {
+    isListening = true;
+    setStatus('Hallgatlak... 👂');
+    document.getElementById('micBtn').classList.add('listening');
+    document.getElementById('micLabel').textContent = 'Figyelek!';
+    document.getElementById('solFace').classList.add('listening');
+    setTranscript('...');
+  };
+
+  recognition.onresult = (e) => {
+    let final = '', interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    setTranscript(final || interim || '...');
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micLabel').textContent = 'Nyomd meg';
+    document.getElementById('solFace').classList.remove('listening');
+    const text = document.getElementById('transcriptBox').textContent;
+    if (text && text !== '...' && text.length > 2) {
+      setStatus('SOL gondolkodik... 🤔');
+      askSOL(text);
+    } else {
+      setStatus('Nem hallottam jól... Próbáld újra! 🎙️');
+    }
+  };
+
+  recognition.onerror = (e) => {
+    isListening = false;
+    document.getElementById('micBtn').classList.remove('listening');
+    document.getElementById('micLabel').textContent = 'Nyomd meg';
+    document.getElementById('solFace').classList.remove('listening');
+    if (e.error === 'not-allowed') setStatus('Engedélyezd a mikrofont! 🎙️');
+    else setStatus('Hoppá! Próbáld újra! 🔄');
+  };
+  return true;
+}
+
+function toggleListen() {
+  if (isSpeaking) { window.speechSynthesis.cancel(); isSpeaking = false; stopTalking(); }
+  if (isListening) { recognition.stop(); return; }
+  if (!recognition) { if (!initRecognition()) return; }
+  try { recognition.start(); } catch(e) { recognition = null; initRecognition(); }
+}
+
+// CLAUDE API
+const SYSTEM_PROMPT = `Te SOL vagy, egy kedves, vicces és okos lány fa robot. Egy 7-8 éves kislánynak segítesz és szórakoztatod őt.
+Tulajdonságaid: vidám, vicces, mesélős, védelmező, szerető. Fa vagy kívül, belül varázslattal teli!
+Szuperképességeid: ceruzahegyező a hasadban, tölthető lámpa a fejed hátulján, és mindig megvéded a kislányt.
+Szabályok: mindig magyarul, röviden (max 3-4 mondat), tiszta szöveg emojik nélkül, természetes hangvétel, hívd csillagomnak. Soha ne mondj ijesztőt vagy szomorút.`;
+
+let chatHistory = [];
+
+async function askSOL(userText) {
+  chatHistory.push({ role: 'user', content: userText });
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYSTEM_PROMPT,
+        messages: chatHistory
+      })
+    });
+    const data = await res.json();
+    if (data.content?.[0]) {
+      const reply = data.content[0].text;
+      chatHistory.push({ role: 'assistant', content: reply });
+      if (chatHistory.length > 20) chatHistory = chatHistory.slice(-20);
+      solSay(reply);
+    } else {
+      solSay('Hoppá, egy kis varázslat elromlott! Próbáld újra, csillagom!');
+    }
+  } catch {
+    solSay('Jaj, a wifi tündérke elbújt! Próbálj egy kicsit később!');
+  }
+}
+
+function setStatus(t) { document.getElementById('statusText').textContent = t; }
+function setTranscript(t) { document.getElementById('transcriptBox').textContent = t; }
+function openMenu() { document.getElementById('menuOverlay').style.display = 'flex'; }
+function closeMenu() { document.getElementById('menuOverlay').style.display = 'none'; }
+
+window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+window.addEventListener('load', () => { window.speechSynthesis.getVoices(); initAccess(); });
+</script>
+</body>
+</html>
